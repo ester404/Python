@@ -69,6 +69,64 @@ Com a ajuda de dois amigos, o código foi refeito com o **Selenium**, e essa ver
 
 A lição que eu tirei: **o robô precisa esperar o site carregar antes de agir**, igual uma pessoa faria.
 
+### Ajustes que eu fiz depois
+
+Código de automação nunca fica pronto de vez. Sempre aparece um documento diferente, e aí é preciso ajustar. Estes foram os ajustes que eu fiz:
+
+| # | Problema | O que eu mudei |
+| --- | --- | --- |
+| 1 | Um arquivo chamado "RESSARCIMENTO ..." não batia com nenhum tipo de pagamento, e o script parava | Coloquei as palavras RESSARCIMENTO e REGRESSO na lista de tipos |
+| 2 | A data de pagamento fica no **cabeçalho** do Word, e o script não lia essa parte | A função que lê o Word passou a ler também o cabeçalho e as caixas de texto |
+| 3 | O script pegava a **data da ocorrência** no lugar da data de pagamento | Troquei o regex por um que só aceita a data **logo depois** da palavra PAGAMENTO |
+| 4 | O modelo de acordo usa "PLACA SEGURADO" e "PLACA TERCEIRO" | Separei em dois regex, um para cada placa |
+| 5 | O campo "Placa do Veículo Terceiro" recebia o **nome** do terceiro | Passei a mandar a **placa** do terceiro |
+
+**1. Novo tipo de pagamento**
+
+```python
+(["RESSARCIMENTO"], "Ação de Regresso"),
+(["REGRESSO"], "Ação de Regresso"),
+```
+
+Como é uma lista, foi só acrescentar duas linhas. O texto da direita tem que ser **igualzinho** à opção do formulário.
+
+**3. Data de pagamento**
+
+Antes:
+
+```python
+r"\bPAGAMENTO\b[\s\S]*?(\d{2}/\d{2}/\d{4})[\s\S]*?\bSPLIT\b"
+```
+
+O `[\s\S]*?` deixava o regex **pular linhas** até achar uma data qualquer. Por isso ele pegava a primeira data do documento, que era a da ocorrência.
+
+Depois:
+
+```python
+r"\bPAGAMENTO\s*(\d{1,2}/\d{1,2}/\d{4})"
+```
+
+Agora, entre PAGAMENTO e a data, só pode ter espaço (`\s*`). Assim ele não pula para outra data.
+
+> Dica: se algum documento vier com dois-pontos (`PAGAMENTO: 02/12/2026`), dá para aceitar os dois jeitos com `\bPAGAMENTO\s*:?\s*(...)`. O `:?` quer dizer "pode ter dois-pontos ou não".
+
+**4. Duas placas**
+
+```python
+"placa": buscar(r"^\s*PLACA(?:\s+SEGURADO)?\s*:\s*([^\r\n]+)"),
+"placa_terceiro": buscar(r"^\s*PLACA\s+TERCEIRO\s*:\s*([^\r\n]+)"),
+```
+
+O `(?:\s+SEGURADO)?` quer dizer "pode ter a palavra SEGURADO depois de PLACA, ou não". Assim o mesmo regex funciona para `PLACA:` e para `PLACA SEGURADO:`. E como ele não aceita TERCEIRO, não confunde as duas placas.
+
+**Como eu descobri cada problema**
+
+1. Rodei o script com o documento que deu errado.
+2. Olhei a lista "Dados extraídos" que aparece na tela: qual dado veio vazio ou errado?
+3. Abri o Word e vi como aquela informação estava escrita **de verdade**.
+4. Ajustei o regex (ou a lista de palavras) e testei no [regex101.com](https://regex101.com).
+5. Rodei de novo para conferir.
+
 Sempre que eu falar "no meu código", é dessa versão que funciona.
 
 ---
